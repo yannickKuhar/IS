@@ -58,8 +58,7 @@ parsePoint <- function(pos, rows, cols) {
 }
 
 
-simulateSolution <- function(maze, solution, rows, cols) {
-  # Update this function to serve as a fitness funcition
+simulateSolution <- function(maze, solution, rows, cols) { # Update this function to serve as a fitness funcition
   # The simplest example is shown here: return 1 if the solution found the exit and 0 if it did not
   kazen <- 3
   punish <- 0
@@ -77,15 +76,15 @@ simulateSolution <- function(maze, solution, rows, cols) {
     } else if (move == 'R') {
       currentPosition <- moveRight(currentPosition, rows, cols)
     } else {
+      print(solution)
       print('Error: Incorrect solution format')
       return(-1)
     }
     if (maze[currentPosition] == '#') {
       punish <- punish + kazen
-      currentPosition <- oldPosition
     }
     if (maze[currentPosition] == 'e') {
-      print('Resitev je najdena!')
+      # print('Resitev je najdena!')
       return(0)
     }
   }
@@ -99,12 +98,12 @@ simulateSolution <- function(maze, solution, rows, cols) {
 
 createPopulateion <- function(maze, rows, cols, size, ngen) {
   
-  populacija = matrix(nrow = size, ncol = ngen)
+  populacija <- vector("list", size)
   
   for (i in c(1:size)) {
     
-    populacija[i] <- createOneAgent(ngen)
-    print(populacija[i])
+    populacija[[i]] <- createOneAgent(ngen)
+    # print(populacija[[i]])
   }
   
   return(populacija)
@@ -163,8 +162,8 @@ geneticAlgorithm <-
   # You should add additional parameters to the function as needed
   
   # Velikost populacije in enega agenta.
-  N = 100
-  ngen = 16
+  N = 30
+  ngen = 12
   
   # Purge param and diversity param.
   purge <- as.integer(N / 2)
@@ -185,7 +184,7 @@ geneticAlgorithm <-
     
     # Eval populacijo.
     for (i in c(1:N)) {
-      fitnessVec[i] <- simulateSolution(maze, populacija[i], rows, cols)
+      fitnessVec[i] <- simulateSolution(maze, populacija[[i]], rows, cols)
     }
     
     # Dobimo fitness populacije.
@@ -194,37 +193,41 @@ geneticAlgorithm <-
     # Pocistimo poulacijo in jo nadomestimo.
     fitnessVec <- sort(fitnessVec)
     
-    for (i in c(purge:purge + diversity)) {
-      populacija[i] <- createOneAgent(ngen)
+    # Multy line comment, because R.  
+    if(FALSE) {
+      for (i in c(purge:purge + diversity)) {
+        populacija[[i]] <- createOneAgent(ngen)
+      }
+      
+      # Zacnemo izvajanje crossover-jev.
+      for (i in seq(purge + diversity, N, 2)) {
+        
+        # print(i)
+        
+        # Preprecimo index out of bounds.
+        if(i != N){
+          
+          parent1 = as.integer(runif(1, 1, purge + diversity))
+          parent2 = as.integer(runif(1, 1, purge + diversity))
+          
+          # print(populacija[[parent1]])
+          # print(populacija[[parent2]])
+          
+          otroka = crossover(populacija[[parent1]], 
+                             populacija[[parent2]])
+          
+          # print(otroka[1])
+          # print(otroka[2])
+          
+          populacija[[i]] <- otroka[1]
+          populacija[[i + 1]] <- otroka[2]
+        }
+        else{
+          populacija[[i]] <- mutacija(populacija[i])
+        }
+      }  
     }
     
-    # Zacnemo izvajanje crossover-jev.
-    for (i in seq(purge + diversity, N, 2)) {
-      
-      print(i)
-      
-      # Preprecimo index out of bounds.
-      if(i != N){
-        
-        parent1 = as.integer(runif(1, 1, purge + diversity))
-        parent2 = as.integer(runif(1, 1, purge + diversity))
-        
-        print(populacija[parent1])
-        print(populacija[parent2])
-        
-        otroka = crossover(populacija[parent1], 
-                           populacija[parent2])
-        
-        # print(otroka[1])
-        # print(otroka[2])
-        
-        populacija[i] = otroka[1]
-        populacija[i + 1] = otroka[2]
-      }
-      else{
-        populacija[i] = mutacija(populacija[i])
-      }
-    }
     
     # Podamo se mutacije z majhno verjetnostjo.
     for (i in c(1:N)) {
@@ -234,13 +237,13 @@ geneticAlgorithm <-
       }
     }
     
-    # print('------------')
-    # print(itr)
-    # itr <- itr + 1
-    # print(fitnessVec)
+    print('------------')
+    print(itr)
+    itr <- itr + 1
+    print(fitnessVec)
     # print(globalFitness)
   }
-},
+}
 
 
 maze1 <- c(' ', ' ', ' ', ' ', 'e',
@@ -277,4 +280,4 @@ solution2 <- c('U', 'U', 'U', 'U', 'U', 'U', 'L', 'L', 'D', 'L', 'L', 'L', 'L', 
 cols2 <- 17
 rows2 <- 18
 
-# geneticAlgorithm(maze1, rows1, cols1)
+geneticAlgorithm(maze1, rows1, cols1)
