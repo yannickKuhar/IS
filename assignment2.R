@@ -5,8 +5,7 @@ library(kernlab)
 library(CORElearn)
 library(e1071)
 library(rpart)
-# library(gtools)
-
+library(gtools)
 #################### 1. ####################
 
 setwd("D:/FRI/3.letnik/IS/")
@@ -100,7 +99,6 @@ CA2 <- function(observed, predicted) {
 sent_lens <- lapply(corpus, avg_sent_len, sent_ann, word_ann)
 doc_words <- lapply(corpus, doc_word_num, sent_ann, word_ann)
 doc_sents <- lapply(corpus, doc_sent_num, sent_ann)
-rare_list <- doc_rare_word(dataset)
 
 # plot(x = c(1:723), y=sent_lens, type="h", main = "x=document_id y=avg_sen_len")
 # plot(x = c(1:723), y=doc_sents, type="h", main = "x=document_id y=sen_len")
@@ -112,6 +110,9 @@ corpus <- tm_map(corpus, removePunctuation)
 dataset <- DocumentTermMatrix(corpus, control = list(weighting = weightTfIdf))
 
 popular_words <- unlist(findMostFreqTerms(dataset,n=1));
+rare_list <- doc_rare_word(dataset)
+
+# plot(x = c(1:723), y=rare_list, type="h", main = "x=document_id y=rare_words_num")
 
 # We make a dictionary of most common words that follow a certain word.
 # findAssocs(dataset, c("word"), c(0.9))
@@ -217,7 +218,7 @@ word_type_matrix <- function(corpus, sent_ann, word_ann, post_ann) {
 
 wtm <- word_type_matrix(corpus, sent_ann, word_ann, post_ann)
 wtmtmp <- wtm
-wtm <- cbind(wtmtmp, c(sent_lens), c(doc_sents), c(doc_words))
+# wtm <- cbind(wtmtmp, c(sent_lens), c(doc_sents), c(doc_words))
 
 wtm_test <- wtm[1:217,]
 wtm_learn <- cbind(wtm[218:723,], c(structure_learn))
@@ -245,26 +246,26 @@ wtm_learn_frame$X8  <- unlist(wtm_learn_frame$X8)
 wtm_learn_frame$X9  <- unlist(wtm_learn_frame$X9)
 wtm_learn_frame$X10 <- unlist(wtm_learn_frame$X10)
 
-# SVM (0.627)
-sm <- svm(X10 ~ ., data = wtm_learn_frame)
+# SVM (0.631)
+sm <- svm(X7 ~ ., data = wtm_learn_frame)
 predicted <- predict(sm, wtm_test_frame , type="class")
 predicted <- round(predicted)
 CA(predicted, structure_test)
 
-# KSVM (0.631)
-ksm <- ksvm(X10 ~ ., data = wtm_learn_frame, kernel = "rbfdot")
+# KSVM (0.636)
+ksm <- ksvm(X7 ~ ., data = wtm_learn_frame, kernel = "rbfdot")
 predicted <- predict(ksm, wtm_test_frame)
 predicted <- round(predicted)
 CA(predicted, structure_test)
 
-# NAIVE BAYES CLASSIFIER (0.22)
-cm.nb <- CoreModel(X10 ~ ., data = wtm_learn_frame, model="bayes")
+# NAIVE BAYES CLASSIFIER (0.23)
+cm.nb <- CoreModel(X7 ~ ., data = wtm_learn_frame, model="bayes")
 predicted <- predict(cm.nb, wtm_test_frame, type="class")
 predicted <- round(predicted)
 CA(predicted, structure_test)
 
-# RANDOM FOREST (0.14)
-cm.rf <- CoreModel(X10 ~ ., data = wtm_learn_frame, model="rf")
+# RANDOM FOREST (0.15)
+cm.rf <- CoreModel(X7 ~ ., data = wtm_learn_frame, model="rf")
 predicted <- predict(cm.rf, wtm_test_frame, type="class")
 predicted <- round(predicted)
 CA(predicted, structure_test)
@@ -273,7 +274,65 @@ CA(predicted, structure_test)
 
 #################### 4. ####################
 
-mycorpus <- read.table("namyths.txt", fill = TRUE)
+stopWords <- stopwords("en")
+fileName <- "namyths.txt"
 
+mycorpus <- readChar(fileName, file.info(fileName)$size)
+mycorpus <- removePunctuation(mycorpus)
+mycorpus <- removeNumbers(mycorpus)
+mycorpus <- tolower(mycorpus)
+mycorpus <- removeWords(mycorpus, stopWords)
+mycorpus <- stemDocument(mycorpus)
+
+sent0 <- "Today I will work on project"
+sent1 <- "I don't have time"
+sent2 <- "In the past"
+sent3 <- "The future"
+
+finish_sent <- function(sent, mycorpus, mode) {
+  
+  text <- mycorpus
+  text <- strsplit(text, split=' ')
+  text <- text[[1]]  
+  
+  lookfor <- strsplit(sent, split=' ')
+  lookfor <- lookfor[[1]]
+  lookfor <- lookfor[length(lookfor)]
+  
+  occurances <- list()
+  
+  for(i in 2:length(text)) {
+    word0 <- text[i - 1]
+    word1 <- text[i]
+    word2 <- text[i + 1]
+    word3 <- text[i + 2]
+    
+    if(mode == "back") {
+      
+      occurances[[word1]] <- c(word0, occurances[[word1]]) 
+    }
+    else {
+      occurances[[word1]] <- c(occurances[[word1]], word2, word3) 
+    }
+    
+  }
+  
+  if(mode == "back") {
+    
+    sorted_table <- sort(table(occurances[[lookfor]]), decreasing=T)  
+    
+    predict <- names(sorted_table[1])
+    
+    tmp_sent <- gsub(lookfor, predict, sent)
+    
+    return(cat(tmp_sent, lookfor, "."))  
+  }
+  
+  sorted_table <- sort(table(occurances[[lookfor]]), decreasing=T)  
+  
+  predict <- names(sorted_table[1])
+  
+  return(cat(sent, predict, "."))
+}
 
 ############################################
