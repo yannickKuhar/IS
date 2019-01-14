@@ -289,7 +289,7 @@ sent1 <- "I don't have time"
 sent2 <- "In the past"
 sent3 <- "The future"
 
-finish_sent <- function(sent, mycorpus, mode) {
+finish_sent <- function(sent, mycorpus, mode="front") {
   
   text <- mycorpus
   text <- strsplit(text, split=' ')
